@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/* ---------- Design tokens ---------- */
+@theme inline {
+  --color-forest: #264d3b;
+  --color-forest-deep: #1b3a2c;
+  --color-sage: #a8bfa3;
+  --color-sage-soft: #e3ebe0;
+  --color-cream: #f7f5ed;
+  --color-cream-deep: #efebdc;
+  --color-charcoal: #242924;
+  --color-ink-soft: #5a615a;
+  --color-terracotta: #c46d4d;
+  --color-terracotta-deep: #a1492b; /* text-safe version of the terracotta accent */
+  --color-terracotta-soft: #f6e3da;
+  --color-line: #e2dece;
+
+  --font-serif: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-cream);
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Focus ---------- */
+:focus-visible {
+  outline: 3px solid var(--color-forest);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.on-dark :focus-visible {
+  outline-color: #fff;
+}
+
+/* Headings that receive programmatic focus on screen change shouldn't show a ring */
+[data-screen-heading]:focus {
+  outline: none;
+}
+
+/* ---------- Motion ---------- */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-6px) rotate(var(--r, 0deg));
+  }
+}
+
+.animate-screen-in {
+  animation: screen-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.animate-rise {
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+.animate-pop {
+  animation: pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.animate-sheet-in {
+  animation: sheet-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.animate-bob {
+  animation: bob 6s ease-in-out infinite;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Tabular figures so budget numbers don't jitter as they change */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Horizontal chart bars grow from the left using a per-bar width variable */
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--w);
+  }
+}
+.animate-bar-grow {
+  width: var(--w);
+  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: var(--delay, 0ms);
+}
