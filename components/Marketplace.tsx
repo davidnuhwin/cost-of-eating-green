@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { GroceryItem } from "@/data/groceries";
-import { itemCount, type CartLine } from "@/lib/game";
+import { MAX_QUANTITY, itemCount, type CartLine } from "@/lib/game";
 import { Basket } from "./Basket";
 import { Receipt } from "./Receipt";
 import { Button } from "./Button";
@@ -13,6 +13,7 @@ interface Props {
   onCheckout: () => void;
 }
 export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const flights = useRef(new Set<HTMLElement>());
   useEffect(() => {
@@ -25,20 +26,48 @@ export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
       active.clear();
     };
   }, []);
-  const change = (id: string, delta: number) => {
+  const change = (
+    id: string,
+    delta: number,
+    dropPoint?: { x: number; y: number },
+  ) => {
+    const quantity = lines.find((line) => line.item.id === id)?.quantity ?? 0;
+    if (delta > 0 && quantity >= MAX_QUANTITY) return;
     onChange(id, delta);
     if (
       delta < 1 ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     )
       return;
+
     const source = root.current?.querySelector(
       `[data-product-art="${id}"] svg`,
     );
     const target = root.current?.querySelector("[data-cart-target]");
     if (!source || !target) return;
-    const from = source.getBoundingClientRect();
-    const to = target.getBoundingClientRect();
+    const sourceRect = source.getBoundingClientRect();
+    const basketRect = target.getBoundingClientRect();
+    const from = dropPoint
+      ? { x: dropPoint.x - 40, y: dropPoint.y - 40, width: 80, height: 80 }
+      : sourceRect;
+    // Land in the product's grid cell, including its future cell on a first add.
+    const existingIndex = lines.findIndex((line) => line.item.id === id);
+    const slot = existingIndex < 0 ? lines.length : existingIndex;
+    const rowCount = Math.max(
+      2,
+      Math.ceil((lines.length + (existingIndex < 0 ? 1 : 0)) / 4),
+    );
+    const cellWidth = basketRect.width / 4;
+    const cellHeight = basketRect.height / rowCount;
+    const landingSize = Math.min(cellWidth, cellHeight);
+    const dx =
+      basketRect.x + ((slot % 4) + 0.5) * cellWidth - from.x - from.width / 2;
+    const dy =
+      basketRect.y +
+      (Math.floor(slot / 4) + 0.5) * cellHeight -
+      from.y -
+      from.height / 2;
+    const scale = landingSize / from.width;
     const flyer = document.createElement("div");
     flyer.className = "flying-product";
     flyer.setAttribute("aria-hidden", "true");
@@ -46,33 +75,72 @@ export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
     flyer.append(source.cloneNode(true));
     document.body.append(flyer);
     flights.current.add(flyer);
-    const dx = to.x + to.width / 2 - from.x - from.width / 2;
-    const dy = to.y + to.height / 2 - from.y - from.height / 2;
     const animation = flyer.animate(
       [
-        { transform: "translate(0,0) scale(1)", opacity: 0.9 },
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
         {
-          transform: `translate(${dx * 0.55}px,${Math.min(dy * 0.55, -90)}px) scale(.65) rotate(-12deg)`,
-          offset: 0.5,
+          transform: "translate(0,-28px) scale(1.12) rotate(-6deg)",
+          offset: 0.18,
           opacity: 1,
         },
         {
-          transform: `translate(${dx}px,${dy}px) scale(.22) rotate(5deg)`,
-          opacity: 0.7,
+          transform: `translate(${dx * 0.7}px,${Math.min(dy - 65, -75)}px) scale(.8) rotate(8deg)`,
+          offset: 0.6,
+          opacity: 1,
         },
-        { transform: `translate(${dx}px,${dy - 12}px) scale(.25)`, opacity: 0 },
+        {
+          transform: `translate(${dx}px,${dy}px) scale(${scale}) rotate(-4deg)`,
+          offset: 0.87,
+          opacity: 1,
+        },
+        {
+          transform: `translate(${dx}px,${dy - 8}px) scale(${scale * 1.05}) rotate(2deg)`,
+          offset: 0.94,
+          opacity: 0.9,
+        },
+        { transform: `translate(${dx}px,${dy}px) scale(${scale})`, opacity: 0 },
       ],
-      { duration: 650, easing: "cubic-bezier(.22,.61,.36,1)" },
+      {
+        duration: dropPoint ? 480 : 900,
+        easing: "cubic-bezier(.22,.61,.36,1)",
+      },
     );
     animation.onfinish = () => {
       flyer.remove();
       flights.current.delete(flyer);
+      const landed = root.current?.querySelector(`[data-cart-product="${id}"]`);
+      landed?.animate(
+        [
+          { transform: "translateY(-5px) rotate(-3deg)" },
+          { transform: "translateY(3px) rotate(2deg)" },
+          { transform: "none" },
+        ],
+        { duration: 260, easing: "ease-out" },
+      );
     };
+  };
+
+  const startDrag = (id: string, event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.setData("application/x-eating-green-product", id);
+    event.dataTransfer.effectAllowed = "copy";
+    setDraggingId(id);
+  };
+  const dragOver = (event: DragEvent<HTMLElement>) => {
+    if (!draggingId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+  const drop = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const id = event.dataTransfer.getData("application/x-eating-green-product");
+    setDraggingId(null);
+    if (!groceries.some((item) => item.id === id)) return;
+    change(id, 1, { x: event.clientX, y: event.clientY });
   };
   return (
     <div
       ref={root}
-      className="mx-auto max-w-[1600px] px-4 pt-7 pb-28 sm:px-8 md:pt-10"
+      className="mx-auto max-w-[1760px] px-4 pt-7 pb-28 sm:px-8 md:pt-10"
     >
       <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -88,29 +156,38 @@ export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
         <p className="max-w-sm text-sm leading-relaxed text-ink-soft">
           Choose what you believe is sustainable.
           <br />
-          Any combination. Prices revealed at checkout.
+          Pick from the shelves. Prices revealed at checkout.
         </p>
       </div>
       <div className="market-layout">
-        <section className="market-products" aria-label="Grocery products">
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {groceries.map((item, index) => (
+        <section className="market-products" aria-label="Grocery shelves">
+          <ul className="market-shelves">
+            {groceries.map((item) => (
               <ProductCard
                 key={item.id}
                 item={item}
-                index={index}
                 quantity={
                   lines.find((line) => line.item.id === item.id)?.quantity ?? 0
                 }
                 onChange={change}
+                onDragStart={startDrag}
+                onDragEnd={() => setDraggingId(null)}
               />
             ))}
           </ul>
         </section>
         <div className="market-cart">
-          <Basket lines={lines} />
+          <Basket
+            lines={lines}
+            receiving={draggingId !== null}
+            onDragOver={dragOver}
+            onDrop={drop}
+          />
         </div>
-        <aside id="live-receipt" className="market-receipt scroll-mt-72">
+        <aside
+          id="live-receipt"
+          className="market-receipt scroll-mt-[360px] lg:scroll-mt-[440px] min-[1440px]:scroll-mt-24"
+        >
           <Receipt lines={lines} />
           <div className="mt-6">
             <Button

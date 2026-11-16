@@ -2,6 +2,8 @@ import { ASSUMPTIONS, EMISSIONS, GROCERIES, SOURCES } from "@/data/groceries";
 import { ChevronDown } from "lucide-react";
 import {
   formatKg,
+  formatMoney,
+  sumCents,
   itemEmissionsKg,
   totalEmissions,
   type CartLine,
@@ -14,6 +16,7 @@ interface Props {
   onPlayAgain: () => void;
 }
 export function Results({ lines, onBack, onPlayAgain }: Props) {
+  const spent = formatMoney(sumCents(lines));
   const total = totalEmissions(lines, EMISSIONS);
   const rows = lines.map(({ item, quantity }) => ({
     item,
@@ -32,13 +35,12 @@ export function Results({ lines, onBack, onPlayAgain }: Props) {
         tabIndex={-1}
         className="mt-3 max-w-3xl font-serif text-4xl leading-tight text-forest md:text-6xl"
       >
-        Your choices.
-        <br />
-        Their cost.
+        Your idea of a sustainable week.
+        <span className="reveal-total">{spent}</span>
       </h1>
       <p className="mt-4 max-w-xl text-lg text-ink-soft">
-        You chose what you believed was sustainable. Now, take a look at what
-        your basket adds up to.
+        You spent {spent} on the groceries you believed would make up a
+        sustainable week of food. How would that cost fit into your life?
       </p>
       <div className="mt-10 grid items-start gap-10 lg:grid-cols-[.85fr_1.15fr]">
         <div className="mx-auto w-full max-w-md">
@@ -109,7 +111,7 @@ export function Results({ lines, onBack, onPlayAgain }: Props) {
         className="mt-16 border-y border-line py-10 md:py-14"
         aria-labelledby="research-heading"
       >
-        <p className="eyebrow">Beyond your receipt</p>
+        <p className="eyebrow">Beyond your {spent} receipt</p>
         <h2
           id="research-heading"
           className="mt-3 max-w-3xl font-serif text-3xl text-forest md:text-4xl"
@@ -117,9 +119,15 @@ export function Results({ lines, onBack, onPlayAgain }: Props) {
           But what does sustainable eating cost around the world?
         </h2>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
-          A global study compared the least-cost EAT–Lancet reference diet with
-          average daily household income per person. Historical estimates using
-          2011 price and income data, published in the January 2020 issue.
+          Your basket cost {spent} at the recorded campus-market prices. Whether
+          a cost is affordable depends on where you live and how much income you
+          have. Hirvonen and colleagues studied this question using the
+          EAT–Lancet reference diet.
+        </p>
+        <p className="mt-3 max-w-3xl text-xs leading-relaxed text-ink-soft">
+          Historical estimates using 2011 price and income data, published in
+          the January 2020 issue. The study compared the least-cost reference
+          diet with average daily household income per person.
         </p>
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
           {[

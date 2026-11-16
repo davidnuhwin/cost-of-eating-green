@@ -1,43 +1,59 @@
+import type { DragEvent } from "react";
 import { CATEGORY_LABELS, type GroceryItem } from "@/data/groceries";
-import { FoodArt, tileBackground } from "./FoodArt";
+import { MAX_QUANTITY } from "@/lib/game";
+import { FoodArt } from "./FoodArt";
 import { QuantityControl } from "./QuantityControl";
+
 interface Props {
   item: GroceryItem;
-  index: number;
   quantity: number;
   onChange: (id: string, delta: number) => void;
+  onDragStart: (id: string, event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
 }
-export function ProductCard({ item, index, quantity, onChange }: Props) {
+
+/** The illustration is the pick-up control, with a label on the shelf rail. */
+export function ProductCard({
+  item,
+  quantity,
+  onChange,
+  onDragStart,
+  onDragEnd,
+}: Props) {
+  const atLimit = quantity === MAX_QUANTITY;
   return (
-    <li className={`product-card ${quantity > 0 ? "is-selected" : ""}`}>
-      <div
-        data-product-art={item.id}
-        className="relative overflow-hidden rounded-t-2xl"
-      >
-        <FoodArt
-          id={item.id}
-          background={tileBackground(index)}
-          className="aspect-[6/5] w-full transition-transform duration-300 hover:scale-105"
-        />
-        <span className="absolute top-3 left-3 rounded-full bg-cream/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider">
-          {CATEGORY_LABELS[item.category]}
-        </span>
+    <li className={`shelf-product ${quantity > 0 ? "is-selected" : ""}`}>
+      <div className="shelf-display">
+        <button
+          type="button"
+          className="shelf-pickup"
+          data-product-art={item.id}
+          disabled={atLimit}
+          draggable={!atLimit}
+          onDragStart={(event) => onDragStart(item.id, event)}
+          onDragEnd={onDragEnd}
+          onClick={() => onChange(item.id, 1)}
+          aria-label={`Add ${item.name} to cart`}
+          aria-describedby={`shelf-label-${item.id}`}
+        >
+          <FoodArt id={item.id} bare className="shelf-food" />
+        </button>
+        {quantity > 0 && (
+          <span className="shelf-selected" aria-hidden="true">
+            ×{quantity}
+          </span>
+        )}
       </div>
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <h2 className="text-sm font-bold leading-snug sm:text-base">
-          {item.name}
-        </h2>
-        <p className="mt-1 text-xs text-ink-soft">{item.packageLabel}</p>
-        <div className="mt-auto pt-4">
-          <QuantityControl
-            name={item.name}
-            quantity={quantity}
-            onChange={(delta) => onChange(item.id, delta)}
-          />
-        </div>
-        <p className="mt-1 min-h-4 text-center text-[10px] text-ink-soft">
-          {quantity === 10 ? "Maximum 10 per product" : ""}
-        </p>
+      <div className="shelf-label" id={`shelf-label-${item.id}`}>
+        <p className="shelf-category">{CATEGORY_LABELS[item.category]}</p>
+        <h2>{item.name}</h2>
+        <p className="shelf-package">{item.packageLabel}</p>
+        <QuantityControl
+          name={item.name}
+          quantity={quantity}
+          onChange={(delta) => onChange(item.id, delta)}
+        />
+        <p className="shelf-limit">{atLimit ? "Maximum 10 per product" : ""}</p>
       </div>
     </li>
   );
