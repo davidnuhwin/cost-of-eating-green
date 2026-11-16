@@ -4,9 +4,11 @@ An interactive classroom game for **UCSD SYN 2 — Climate, Sustainability, and 
 
 > How do food insecurity and income inequality affect California college students' access to sustainable food options, and what responsibility do universities and institutions have to make sustainable eating affordable and accessible?
 
-Students get **$25** to build a grocery basket (at least one protein, one vegetable, one staple), then check out to see the estimated climate impact of their choices and discuss what shaped them. There is no score and no "right" basket.
+Choose a weekly grocery basket based on your own idea of sustainability. Add 0–10 of each of the 16 original campus-market products, then check out to reveal prices and estimated emissions. Any nonempty basket can check out.
 
-Three screens: **Landing → Grocery Marketplace → Results & Reflection**. Everything runs client-side: no backend, database, accounts, or external API calls while playing.
+Three screens: **Introduction → Grocery Marketplace → Receipt & Reflection**. Everything runs client-side. Cart quantities persist while moving between screens during a session. Refreshing clears the cart. Returning from results preserves it, and Start over clears it.
+
+The live receipt hides all prices until checkout. Results include historical EAT–Lancet affordability findings from Hirvonen et al. (2020), using 2011 data, with source links and methodological context. The player’s basket is assessed independently of the reference diet.
 
 ## Run it locally
 
@@ -23,18 +25,16 @@ Other commands:
 npm run build      # production build
 npm start          # serve the production build
 npm run lint       # ESLint
-npm test           # unit tests for budget / checkout / emissions logic
+npm test           # unit tests for quantities / checkout / emissions logic
 ```
 
 To try it on your phone while developing, open `http://<your-computer's-LAN-IP>:3000` (same Wi-Fi).
 
 ## Deploy to Vercel
 
-1. Push this folder to a GitHub repository.
-2. Go to [vercel.com/new](https://vercel.com/new), import the repo, and click **Deploy**. No environment variables or special settings are needed; Vercel detects Next.js automatically.
-3. Copy the deployed URL into any QR-code generator for class.
+Review `git diff` and try the local preview before publishing. This project can continue using its existing GitHub repository and Vercel project. After approving the changes, commit the reviewed files and push to the branch connected to that Vercel project. Review the resulting Vercel preview before promoting it to production, or use your existing production-branch workflow.
 
-(Or from the terminal: `npx vercel` and follow the prompts.)
+No environment changes are required for this redesign.
 
 Fonts (DM Serif Display, DM Sans) are self-hosted in `app/fonts/`, so builds and gameplay never need to reach Google.
 
@@ -42,30 +42,31 @@ Fonts (DM Serif Display, DM Sans) are self-hosted in `app/fonts/`, so builds and
 
 **Everything lives in one file: [`data/groceries.ts`](data/groceries.ts).**
 
-- `STARTING_BUDGET_CENTS`: the budget, in cents (2500 = $25.00).
-- `GROCERIES`: each product's name, category, package label, `weightKg`, `priceCents`, and an `emissionsKey`.
-- `EMISSIONS`: kg CO₂e per kg of food (Our World in Data / Poore & Nemecek 2018).
+- `GROCERIES`: 16 UCSD campus-market products with their observed prices (in cents). Each has an optional `estimate` (weight used, where that weight came from, which factor, and whether it is a `direct` or closest-match `proxy`).
+- `EMISSIONS`: kg CO₂e per kg of food. Most come from Our World in Data (Poore & Nemecek 2018). Tuna comes from a WWF brief.
 - `SOURCES` and `ASSUMPTIONS`: the text in the results screen's "Sources & Assumptions" panel.
 
-Estimated emissions for a package = `weightKg × kgCO2ePerKg`. Prices are in cents to avoid floating-point errors.
+Estimated emissions for a package = `weightKg × kgCO2ePerKg`. **If you delete an item's `estimate`, the game shows "Not estimated" for it and counts the basket total as partial. It never treats unknown as zero.**
 
-If you add a product, also add an illustration for its `id` in `components/FoodArt.tsx` (otherwise it shows a plain placeholder circle). Keep the list around 10–12 items so the grid stays clean.
+If you add a product, also add an illustration for its `id` in `components/FoodArt.tsx`.
 
 ## Project structure
 
 ```
 app/            layout, global styles, fonts, the single page
-components/     Game (state + screen flow), Landing, Marketplace, Results,
-                ProductCard, Basket, BudgetTracker, Header, Button, FoodArt (SVGs)
+components/     Game (quantity state + screen flow), Landing, Marketplace, Results,
+                ProductCard, QuantityControl, Basket (cart illustration), Receipt,
+                Header, Button, FoodArt (SVGs)
 data/           groceries.ts: the editable dataset
-lib/            game.ts: pure budget, checkout, and emissions functions
+lib/            game.ts: pure quantity, checkout, and emissions functions
 scripts/        verify.test.ts: unit tests for lib/ and the dataset
 ```
 
 ## Honest notes and limitations
 
-- **Prices are illustrative classroom prices**, not live or verified California retail prices. The UI says so on the marketplace, in the footer, and in Sources & Assumptions.
-- **Conventional and organic tomatoes share one commodity-average emissions factor**, so the estimate can't show production-specific differences. This is stated in the results panel. The point is to challenge the assumption that "organic" automatically means lower emissions, not to claim it doesn't.
-- A **plant-based burger was left out** because the provided reference data has no defensible emissions factor for it.
-- Eggs use an approximate dozen weight (~0.6 kg); dried split peas use the generic "peas" factor.
-- Emissions are **one environmental indicator**, not a full measure of sustainability. The protein/vegetable/staple rule is a gameplay constraint, not a nutrition standard.
+- **Prices** were observed at UCSD campus markets. The date was not recorded, so they may have changed.
+- **Package sizes** were not recorded for 7 products (the cards say "Size not listed"). Emissions use typical or sourced weights, each explained in the results screen's audit table.
+- **≈ estimates** (tuna, lentil pouch, avocado, canned green beans, ramen, sourdough, hot fries) use the closest available factor, not a measurement of that exact product. Processed, multi-ingredient foods are the least certain.
+- Tuna's factor covers a wider supply chain than the others, with a large range (about 2 to 16+), so it is not like-for-like with produce.
+- Organic eggs and local tomatoes use generic factors, so the estimates cannot show organic or local differences.
+- Emissions are **one environmental indicator**, not a full measure of sustainability. The basket is a personal selection, with no category requirements or nutritional assessment.

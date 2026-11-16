@@ -21,7 +21,7 @@ const dmSans = localFont({
 export const metadata: Metadata = {
   title: "The Cost of Eating Green",
   description:
-    "A short grocery challenge for UCSD SYN 2: build a $25 basket and see how affordability and environmental impact interact.",
+    "Choose a weekly grocery basket, reveal its cost and estimated emissions, and explore food access and climate justice.",
 };
 
 export const viewport: Viewport = {

@@ -1,200 +1,220 @@
-import { ChevronDown, RotateCcw } from "lucide-react";
-import type { CSSProperties } from "react";
+import { ASSUMPTIONS, EMISSIONS, GROCERIES, SOURCES } from "@/data/groceries";
+import { ChevronDown } from "lucide-react";
 import {
-  ASSUMPTIONS,
-  CATEGORY_LABELS,
-  EMISSIONS,
-  SOURCES,
-  type GroceryItem,
-} from "@/data/groceries";
-import { formatKg, formatMoney, itemEmissionsKg, totalEmissionsKg } from "@/lib/game";
+  formatKg,
+  itemEmissionsKg,
+  totalEmissions,
+  type CartLine,
+} from "@/lib/game";
+import { Receipt } from "./Receipt";
 import { Button } from "./Button";
-import { FoodArt } from "./FoodArt";
-
-interface ResultsProps {
-  items: GroceryItem[];
-  budgetCents: number;
-  spentCents: number;
-  remainingCents: number;
+interface Props {
+  lines: CartLine[];
+  onBack: () => void;
   onPlayAgain: () => void;
 }
-
-const delay = (ms: number) => ({ "--delay": `${ms}ms` }) as CSSProperties;
-
-export function Results({ items, budgetCents, spentCents, remainingCents, onPlayAgain }: ResultsProps) {
-  const rows = items.map((item) => ({ item, kg: itemEmissionsKg(item, EMISSIONS) }));
-  const total = totalEmissionsKg(items, EMISSIONS);
-  const byEmissions = [...rows].sort((a, b) => b.kg - a.kg);
-  const maxKg = Math.max(...rows.map((r) => r.kg), 0.0001);
-  const highest = byEmissions[0];
-  const lowest = byEmissions[byEmissions.length - 1];
-
+export function Results({ lines, onBack, onPlayAgain }: Props) {
+  const total = totalEmissions(lines, EMISSIONS);
+  const rows = lines.map(({ item, quantity }) => ({
+    item,
+    quantity,
+    kg: itemEmissionsKg(item, EMISSIONS),
+  }));
+  const maxKg = Math.max(
+    ...rows.map(({ kg, quantity }) => (kg ?? 0) * quantity),
+    0.0001,
+  );
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-5 pt-8 pb-20 md:px-10 md:pt-12 lg:px-20">
-      <div className="animate-rise max-w-3xl">
-        <p className="mb-3 text-xs font-bold tracking-wider text-ink-soft uppercase">Your results</p>
-        <h1
-          data-screen-heading
-          tabIndex={-1}
-          className="font-serif text-4xl leading-tight text-forest md:text-6xl"
-        >
-          Here’s what your basket adds up to
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-ink-soft md:text-lg">
-          There’s no right or wrong basket. These numbers are a starting point for talking about
-          what shaped your choices.
-        </p>
-      </div>
-
-      {/* Headline numbers */}
-      <section aria-label="Summary" className="mt-10 grid gap-4 md:grid-cols-3">
-        <Stat label="Total spent" value={formatMoney(spentCents)} sub={`of ${formatMoney(budgetCents)}`} d={100} />
-        <Stat label="Money remaining" value={formatMoney(remainingCents)} sub="left in your budget" d={200} />
-        <Stat
-          label="Estimated carbon footprint"
-          value={formatKg(total)}
-          unit="kg CO₂e"
-          sub="for these packages"
-          d={300}
-          dark
-        />
-      </section>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {/* Breakdown */}
-        <section
-          aria-labelledby="breakdown-h"
-          className="animate-rise rounded-[28px] border border-line bg-white p-6 md:p-8"
-          style={delay(400)}
-        >
-          <h2 id="breakdown-h" className="font-serif text-2xl text-forest md:text-3xl">
-            Grocery breakdown
-          </h2>
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[420px] text-left text-sm">
-              <caption className="sr-only">Selected items with price and estimated emissions</caption>
-              <thead>
-                <tr className="border-b border-line text-xs tracking-wider text-ink-soft uppercase">
-                  <th scope="col" className="pb-2 font-semibold">Item</th>
-                  <th scope="col" className="pb-2 text-right font-semibold">Price</th>
-                  <th scope="col" className="pb-2 text-right font-semibold">Est. kg CO₂e</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(({ item, kg }) => (
-                  <tr key={item.id} className="border-b border-line/70 last:border-0">
-                    <th scope="row" className="py-3 pr-3 font-normal">
-                      <div className="flex items-center gap-3">
-                        <FoodArt id={item.id} className="size-11 shrink-0 rounded-xl" background="#efe6cf" />
-                        <div>
-                          <p className="font-semibold">{item.name}</p>
-                          <p className="text-xs text-ink-soft">
-                            {CATEGORY_LABELS[item.category]} · {item.packageLabel}
-                          </p>
-                        </div>
-                      </div>
-                    </th>
-                    <td className="tnum py-3 text-right font-semibold">{formatMoney(item.priceCents)}</td>
-                    <td className="tnum py-3 text-right font-semibold">{formatKg(kg)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-forest">
-                  <th scope="row" className="pt-3 text-base font-bold">Total</th>
-                  <td className="tnum pt-3 text-right text-base font-bold">{formatMoney(spentCents)}</td>
-                  <td className="tnum pt-3 text-right text-base font-bold">{formatKg(total)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </section>
-
-        {/* Chart */}
-        <section
-          aria-labelledby="chart-h"
-          className="animate-rise rounded-[28px] border border-line bg-white p-6 md:p-8"
-          style={delay(500)}
-        >
-          <h2 id="chart-h" className="font-serif text-2xl text-forest md:text-3xl">
-            Emissions by item
-          </h2>
-          <p className="mt-1 text-sm text-ink-soft">Estimated kg CO₂e for each package you chose.</p>
-
-          <ul className="mt-6 flex flex-col gap-4">
-            {byEmissions.map(({ item, kg }, i) => (
-              <li key={item.id}>
-                <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-                  <span className="font-semibold">{item.name}</span>
-                  <span className="tnum text-ink-soft">
-                    <strong className="text-charcoal">{formatKg(kg)}</strong> kg
-                  </span>
-                </div>
-                <div className="h-4 overflow-hidden rounded-full bg-cream-deep" aria-hidden="true">
-                  <div
-                    className="animate-bar-grow h-full rounded-full bg-forest"
-                    style={{ "--w": `${Math.max(2, (kg / maxKg) * 100)}%`, "--delay": `${700 + i * 120}ms` } as CSSProperties}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {rows.length > 1 && (
-            <p className="mt-6 rounded-2xl bg-cream p-4 text-sm leading-relaxed">
-              Highest in your basket: <strong>{highest.item.name}</strong> ({formatKg(highest.kg)} kg
-              CO₂e, {formatMoney(highest.item.priceCents)}). Lowest: <strong>{lowest.item.name}</strong>{" "}
-              ({formatKg(lowest.kg)} kg CO₂e, {formatMoney(lowest.item.priceCents)}).
-            </p>
-          )}
-        </section>
-      </div>
-
-      {/* Reflection */}
-      <section
-        aria-labelledby="reflect-h"
-        className="animate-rise mt-6 rounded-[28px] bg-forest p-6 text-cream md:p-10"
-        style={delay(600)}
+    <div className="mx-auto max-w-[1280px] px-5 py-10 md:px-10 md:py-14">
+      <p className="eyebrow">The reveal</p>
+      <h1
+        data-screen-heading
+        tabIndex={-1}
+        className="mt-3 max-w-3xl font-serif text-4xl leading-tight text-forest md:text-6xl"
       >
-        <div className="on-dark grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-14">
-          <div>
-            <h2 id="reflect-h" className="font-serif text-3xl md:text-4xl">
-              What do these choices tell us?
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-cream/90 md:text-lg">
-              Some lower-emissions foods are inexpensive, while others cost more. But access to
-              sustainable food isn’t determined by price alone. Income, transportation, time, and
-              institutional resources also influence students’ choices.
-            </p>
-          </div>
-          <ol className="flex flex-col gap-4">
-            <li className="rounded-2xl bg-white/10 p-5 md:p-6">
-              <p className="text-xs font-bold tracking-wider text-sage uppercase">Discussion question 1</p>
-              <p className="mt-2 text-lg leading-snug md:text-xl">
-                How did your $25 budget influence the foods you chose? Would your decisions have
-                changed if you had more or less money?
+        Your choices.
+        <br />
+        Their cost.
+      </h1>
+      <p className="mt-4 max-w-xl text-lg text-ink-soft">
+        You chose what you believed was sustainable. Now, take a look at what
+        your basket adds up to.
+      </p>
+      <div className="mt-10 grid items-start gap-10 lg:grid-cols-[.85fr_1.15fr]">
+        <div className="mx-auto w-full max-w-md">
+          <Receipt lines={lines} finalized />
+          <p className="mt-6 text-xs leading-relaxed text-ink-soft">
+            Recorded UCSD campus-market prices. Observation date was not
+            recorded, so prices may have changed.
+          </p>
+        </div>
+        <section
+          className="rounded-3xl bg-sage-soft p-6 md:p-8"
+          aria-labelledby="carbon-heading"
+        >
+          <h2 id="carbon-heading" className="text-sm font-semibold">
+            Estimated basket emissions{!total.complete && " · partial"}
+          </h2>
+          <p className="mt-3 font-serif text-6xl text-forest">
+            {total.estimated ? formatKg(total.kg) : "—"}
+            <span className="ml-2 font-sans text-base">kg CO₂e</span>
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+            Package weight × food emissions factor × quantity. {total.estimated}{" "}
+            of {total.total} units estimated.{" "}
+            {total.proxies > 0 &&
+              `${total.proxies} units use closest-match factors (≈).`}{" "}
+            These estimates cover the packages selected, with uncertain weights
+            and global-average factors.
+          </p>
+          <ul className="mt-7 space-y-4">
+            {[...rows]
+              .sort(
+                (a, b) => (b.kg ?? -1) * b.quantity - (a.kg ?? -1) * a.quantity,
+              )
+              .map(({ item, quantity, kg }) => (
+                <li key={item.id}>
+                  <div className="mb-1 flex justify-between gap-4 text-xs">
+                    <span>
+                      {quantity}× {item.name}
+                    </span>
+                    <span className="shrink-0 font-semibold">
+                      {kg === null
+                        ? "Not estimated"
+                        : `${item.estimate?.match === "proxy" ? "≈ " : ""}${formatKg(kg * quantity)} kg`}
+                    </span>
+                  </div>
+                  {kg !== null && (
+                    <div
+                      className="h-2 rounded-full bg-white/70"
+                      aria-hidden="true"
+                    >
+                      <div
+                        className="h-full rounded-full bg-forest"
+                        style={{ width: `${((kg * quantity) / maxKg) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </li>
+              ))}
+          </ul>
+          <p className="mt-6 text-xs leading-relaxed text-ink-soft">
+            Emissions are one environmental indicator. Water, land,
+            biodiversity, and labor also matter. Weights, proxies, and source
+            boundaries are explained below.
+          </p>
+        </section>
+      </div>
+      <section
+        className="mt-16 border-y border-line py-10 md:py-14"
+        aria-labelledby="research-heading"
+      >
+        <p className="eyebrow">Beyond your receipt</p>
+        <h2
+          id="research-heading"
+          className="mt-3 max-w-3xl font-serif text-3xl text-forest md:text-4xl"
+        >
+          But what does sustainable eating cost around the world?
+        </h2>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
+          A global study compared the least-cost EAT–Lancet reference diet with
+          average daily household income per person. Historical estimates using
+          2011 price and income data, published in the January 2020 issue.
+        </p>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+          {[
+            { label: "High-income countries", value: 6.1 },
+            { label: "Low-income countries", value: 89.1 },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-2xl bg-white p-6">
+              <p className="text-sm font-semibold">{label}</p>
+              <p className="mt-2 font-serif text-6xl text-forest">{value}%</p>
+              <p className="mt-3 text-sm text-ink-soft">
+                of average per-capita household income needed for the reference
+                diet
               </p>
-            </li>
-            <li className="rounded-2xl bg-white/10 p-5 md:p-6">
-              <p className="text-xs font-bold tracking-wider text-sage uppercase">Discussion question 2</p>
-              <p className="mt-2 text-lg leading-snug md:text-xl">
-                What could universities do to make affordable, sustainable food more accessible to
-                students experiencing food insecurity?
-              </p>
-            </li>
-          </ol>
+              <div
+                className="mt-5 h-4 rounded-full bg-cream-deep"
+                aria-hidden="true"
+              >
+                <div
+                  className="h-full rounded-full bg-forest"
+                  style={{ width: `${value}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-8 max-w-3xl font-serif text-2xl text-forest">
+          At least 1.58 billion people were estimated to be unable to afford
+          this diet.
+        </p>
+        <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ink-soft">
+          The percentages are medians across countries in each income group,
+          using each country’s mean per-capita household income. They describe
+          the reference diet, and cannot be applied to your basket. Your
+          selection has not been assessed for nutritional completeness or
+          equivalence to that diet. The figures describe historical conditions
+          and vary within income groups.
+        </p>
+        <p className="mt-4 text-xs leading-relaxed">
+          <a
+            href="https://doi.org/10.1016/S2214-109X(19)30447-4"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            Hirvonen, Bai, Headey &amp; Masters (2020), The Lancet Global
+            Health, 8(1), e59–e66
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7024996/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            Read the full study
+          </a>
+        </p>
+      </section>
+      <section
+        className="on-dark mt-10 rounded-3xl bg-forest p-7 text-cream md:p-10"
+        aria-labelledby="reflection-heading"
+      >
+        <h2
+          id="reflection-heading"
+          className="max-w-3xl font-serif text-3xl md:text-4xl"
+        >
+          You chose what you believed was sustainable. But what if you couldn’t
+          afford those choices?
+        </h2>
+        <p className="mt-5 max-w-3xl leading-relaxed">
+          Affordability, income inequality, transportation, and time shape what
+          reaches our plates. College students facing food insecurity may have
+          to weigh groceries against rent, tuition, and other essentials.
+        </p>
+        <p className="mt-4 max-w-3xl leading-relaxed">
+          Universities and food institutions shape access through campus prices,
+          meal programs, food assistance, and sourcing decisions. Sustainable
+          eating depends on the systems that make choices possible.
+        </p>
+        <div className="mt-7 grid gap-5 border-t border-white/25 pt-6 sm:grid-cols-2">
+          <p className="font-serif text-xl">
+            How would knowing the prices first have changed your basket?
+          </p>
+          <p className="font-serif text-xl">
+            What could universities do to make affordable, sustainable food more
+            accessible?
+          </p>
         </div>
       </section>
-
-      {/* Play again */}
-      <div className="mt-10 flex flex-col items-center gap-3 text-center">
-        <Button size="lg" onClick={onPlayAgain}>
-          <RotateCcw size={20} aria-hidden="true" />
-          Play Again
+      <div className="mt-10 flex flex-wrap justify-center gap-3">
+        <Button onClick={onBack}>Return to shopping</Button>
+        <Button variant="secondary" onClick={onPlayAgain}>
+          Try a new basket
         </Button>
-        <p className="text-sm text-ink-soft">Try a different basket and compare what changes.</p>
       </div>
-
       {/* Sources */}
       <details className="group mx-auto mt-10 max-w-3xl rounded-2xl border border-line bg-white">
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-semibold text-forest marker:content-none [&::-webkit-details-marker]:hidden">
@@ -229,51 +249,59 @@ export function Results({ items, budgetCents, spentCents, remainingCents, onPlay
               <li key={a}>{a}</li>
             ))}
           </ul>
-          <h3 className="mt-5 font-bold">Emissions factors used</h3>
-          <ul className="tnum mt-2 grid gap-x-6 gap-y-1 text-ink-soft sm:grid-cols-2">
-            {Object.values(EMISSIONS).map((f) => (
-              <li key={f.commodity} className="flex justify-between border-b border-line/60 py-1">
-                <span>{f.commodity}</span>
-                <span>{f.kgCO2ePerKg} kg CO₂e/kg</span>
-              </li>
-            ))}
-          </ul>
+          <h3 className="mt-5 font-bold">
+            Weights and factors behind each estimate
+          </h3>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left text-xs">
+              <caption className="sr-only">
+                Weight and emissions factor used for each product
+              </caption>
+              <thead>
+                <tr className="border-b border-line text-ink-soft">
+                  <th scope="col" className="pr-3 pb-1.5 font-semibold">
+                    Product
+                  </th>
+                  <th scope="col" className="pr-3 pb-1.5 font-semibold">
+                    Weight used
+                  </th>
+                  <th scope="col" className="pb-1.5 font-semibold">
+                    Factor (kg CO₂e per kg)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="align-top text-ink-soft">
+                {GROCERIES.filter((g) => g.estimate).map((g) => {
+                  const est = g.estimate!;
+                  const factor = EMISSIONS[est.factorKey];
+                  return (
+                    <tr key={g.id} className="border-b border-line/60">
+                      <th
+                        scope="row"
+                        className="py-2 pr-3 font-semibold text-charcoal"
+                      >
+                        {g.name}
+                      </th>
+                      <td className="py-2 pr-3">
+                        {Math.round(est.weightKg * 1000)} g. {est.weightNote}
+                      </td>
+                      <td className="tnum py-2">
+                        {est.match === "proxy" && (
+                          <span title="closest match">≈ </span>
+                        )}
+                        {factor.kgCO2ePerKg} ({factor.commodity})
+                        {factor.note && (
+                          <span className="block">{factor.note}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </details>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  unit,
-  sub,
-  d,
-  dark = false,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  sub: string;
-  d: number;
-  dark?: boolean;
-}) {
-  return (
-    <div
-      className={`animate-rise rounded-[28px] p-6 md:p-7 ${
-        dark ? "bg-sage text-forest-deep" : "border border-line bg-white"
-      }`}
-      style={delay(d)}
-    >
-      <p className={`text-xs font-bold tracking-wider uppercase ${dark ? "text-forest-deep" : "text-ink-soft"}`}>
-        {label}
-      </p>
-      <p className="tnum mt-2 font-serif text-5xl leading-none text-forest md:text-6xl">
-        {value}
-        {unit && <span className="ml-2 font-sans text-base font-bold tracking-normal">{unit}</span>}
-      </p>
-      <p className={`mt-2 text-sm ${dark ? "text-forest-deep" : "text-ink-soft"}`}>{sub}</p>
     </div>
   );
 }
