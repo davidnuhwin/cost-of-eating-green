@@ -26,7 +26,23 @@ export function Landing({ onStart }: { onStart: () => void }) {
             spending limit. Prices and estimated emissions will be revealed
             after checkout.
           </p>
-          <Button size="lg" onClick={onStart} className="mt-8">
+          <div className="mt-8 max-w-xl rounded-xl border border-line bg-paper/70 p-5 sm:p-6">
+            <p className="eyebrow">Before You Shop</p>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              How do you make food choices? Take a quick survey about food
+              affordability and sustainability before putting your assumptions
+              to the test.
+            </p>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSdGiAHJVzmzTOw0M6eNQXjwemQrzQXvPmS9KJG15QvAvNZ7YA/viewform?usp=publish-editor"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-12 items-center justify-center rounded-full border border-forest px-5 py-3 text-sm font-semibold text-forest transition-colors hover:bg-sage-soft focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-forest"
+            >
+              Take the Pre-Game Survey <ArrowRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <Button size="lg" onClick={onStart} className="mt-4">
             Start Shopping <ArrowRight size={20} aria-hidden="true" />
           </Button>
           <p className="mt-4 text-xs text-ink-soft">
