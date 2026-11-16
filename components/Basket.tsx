@@ -1,6 +1,6 @@
-import { useId, type DragEvent, type CSSProperties } from "react";
+import { useId, type DragEvent } from "react";
 import { itemCount, type CartLine } from "@/lib/game";
-import { FoodArt } from "./FoodArt";
+import { CartProduct } from "./CartProduct";
 
 interface Props {
   lines: CartLine[];
@@ -109,15 +109,7 @@ export function Basket({ lines, receiving, onDragOver, onDrop }: Props) {
             opacity=".65"
           />
         </svg>
-        <div
-          className="cart-contents"
-          data-cart-target
-          style={
-            {
-              "--cart-rows": Math.max(2, Math.ceil(lines.length / 4)),
-            } as CSSProperties
-          }
-        >
+        <div className="cart-contents" data-cart-target>
           {lines.length === 0 ? (
             <p className="cart-empty">
               A week of possibilities.
@@ -125,21 +117,38 @@ export function Basket({ lines, receiving, onDragOver, onDrop }: Props) {
               Pick something from the shelves.
             </p>
           ) : (
-            lines.map(({ item, quantity }) => (
-              <div
-                key={item.id}
-                className="cart-product"
-                data-cart-product={item.id}
-                aria-label={`${item.name}, quantity ${quantity}`}
-                title={`${item.name} ×${quantity}`}
-              >
-                <FoodArt id={item.id} bare className="size-full" />
-                <span className="cart-badge">×{quantity}</span>
-              </div>
+            lines.map((line, index) => (
+              <CartProduct
+                key={line.item.id}
+                line={line}
+                index={index}
+                count={lines.length}
+              />
             ))
           )}
         </div>
-        <div className="cart-front-wire" aria-hidden="true" />
+        <svg
+          className="cart-front-wire"
+          viewBox="0 0 600 420"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <g
+            fill="none"
+            stroke={`url(#${metal})`}
+            strokeWidth="3"
+            strokeLinejoin="round"
+          >
+            {Array.from({ length: 12 }, (_, index) => (
+              <path
+                key={index}
+                d={`M${112 + index * 40} ${79 + index * 2.5}L${172 + index * 34} ${272 - index}`}
+              />
+            ))}
+            <path d="M119 121l443 24M132 166l428 17M145 211l413 8M157 257l399-4" />
+            <path d="M100 66l466 31-6 169-403 15z" strokeWidth="7" />
+          </g>
+        </svg>
       </div>
       <p className="cart-instruction">
         {receiving

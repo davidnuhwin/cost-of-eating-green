@@ -50,24 +50,9 @@ export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
     const from = dropPoint
       ? { x: dropPoint.x - 40, y: dropPoint.y - 40, width: 80, height: 80 }
       : sourceRect;
-    // Land in the product's grid cell, including its future cell on a first add.
-    const existingIndex = lines.findIndex((line) => line.item.id === id);
-    const slot = existingIndex < 0 ? lines.length : existingIndex;
-    const rowCount = Math.max(
-      2,
-      Math.ceil((lines.length + (existingIndex < 0 ? 1 : 0)) / 4),
-    );
-    const cellWidth = basketRect.width / 4;
-    const cellHeight = basketRect.height / rowCount;
-    const landingSize = Math.min(cellWidth, cellHeight);
-    const dx =
-      basketRect.x + ((slot % 4) + 0.5) * cellWidth - from.x - from.width / 2;
-    const dy =
-      basketRect.y +
-      (Math.floor(slot / 4) + 0.5) * cellHeight -
-      from.y -
-      from.height / 2;
-    const scale = landingSize / from.width;
+    const dx = basketRect.x + basketRect.width / 2 - from.x - from.width / 2;
+    const dy = basketRect.y - from.y - from.height / 2;
+    const scale = Math.min(0.6, basketRect.width / 4 / from.width);
     const flyer = document.createElement("div");
     flyer.className = "flying-product";
     flyer.setAttribute("aria-hidden", "true");
@@ -101,22 +86,13 @@ export function Marketplace({ groceries, lines, onChange, onCheckout }: Props) {
         { transform: `translate(${dx}px,${dy}px) scale(${scale})`, opacity: 0 },
       ],
       {
-        duration: dropPoint ? 480 : 900,
+        duration: dropPoint ? 160 : 240,
         easing: "cubic-bezier(.22,.61,.36,1)",
       },
     );
     animation.onfinish = () => {
       flyer.remove();
       flights.current.delete(flyer);
-      const landed = root.current?.querySelector(`[data-cart-product="${id}"]`);
-      landed?.animate(
-        [
-          { transform: "translateY(-5px) rotate(-3deg)" },
-          { transform: "translateY(3px) rotate(2deg)" },
-          { transform: "none" },
-        ],
-        { duration: 260, easing: "ease-out" },
-      );
     };
   };
 
